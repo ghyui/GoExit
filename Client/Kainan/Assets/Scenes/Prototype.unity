@@ -1362,6 +1362,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   speed: 5
+  movableWhenPlayingSkillMotion: 0
 --- !u!70 &2089261866
 CapsuleCollider2D:
   m_ObjectHideFlags: 0

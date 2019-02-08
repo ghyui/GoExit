@@ -1,7 +1,15 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using System;
+
+public enum SkillType
+{
+    SKILL_1,
+    SKILL_2,
+}
+
 
 public class Character : MonoBehaviour {
 
@@ -9,7 +17,12 @@ public class Character : MonoBehaviour {
     [Header("Move")]
     [SerializeField]
     float speed = 20f;
-    
+
+    [Header("Skill")]
+    [SerializeField]
+    bool movableWhenPlayingSkillMotion = true;
+
+    bool IsSkillPlaying = false;
     bool IsWalking { get { return movement.Direction != MoveDirection.NONE; } }
     Movement movement = new Movement();
 
@@ -17,19 +30,45 @@ public class Character : MonoBehaviour {
 
 	void Start () {
         animator = GetComponent<Animator>();
+
+        foreach(var skillState in animator.GetBehaviours<SkillStateMachineBehaviour>())
+        {
+            skillState.OnStart += OnSkillStart;
+            skillState.OnCompleted += OnSkillCompleted;
+        }
 	}
 	
 	// Update is called once per frame
 	void Update () {
-		if(Input.GetKeyDown(KeyCode.W))
+
+        ProcessMoveInput();
+
+        if (Input.GetMouseButtonDown(0))
+        {
+            PlaySkill(SkillType.SKILL_1);
+        }
+        if (Input.GetMouseButtonDown(1))
+        {
+            PlaySkill(SkillType.SKILL_2);
+        }
+    }
+
+    bool CanMovable()
+    {
+        return movableWhenPlayingSkillMotion || IsSkillPlaying == false;
+    }
+
+    void ProcessMoveInput()
+    {
+        if (Input.GetKeyDown(KeyCode.W))
         {
             StartMove(MoveDirection.UP);
         }
-        if(Input.GetKeyUp(KeyCode.W))
+        if (Input.GetKeyUp(KeyCode.W))
         {
             StopMove(MoveDirection.UP);
         }
-        if(Input.GetKeyDown(KeyCode.S))
+        if (Input.GetKeyDown(KeyCode.S))
         {
             StartMove(MoveDirection.DOWN);
         }
@@ -54,15 +93,14 @@ public class Character : MonoBehaviour {
             StopMove(MoveDirection.RIGHT);
         }
 
-        if(IsWalking)
+        if (CanMovable() && IsWalking)
         {
-            var currentPosition = transform.position;
-            float newX = transform.position.x;
-            float newY = transform.position.y;
+            float newX = 0;
+            float newY = 0;
 
             var distance = speed * Time.deltaTime;
 
-            if(movement.HasDirection(MoveDirection.UP))
+            if (movement.HasDirection(MoveDirection.UP))
             {
                 newY += distance;
             }
@@ -79,7 +117,7 @@ public class Character : MonoBehaviour {
                 newX += distance;
             }
 
-            transform.position = new Vector2(newX, newY);
+            transform.Translate(new Vector2(newX, newY));
         }
 
         SetFace();
@@ -150,11 +188,38 @@ public class Character : MonoBehaviour {
 
     void StopMove(MoveDirection dir)
     {
-        movement.RemoveDirection(dir);
+        movement.StopMove(dir);
 
         if(movement.Direction == MoveDirection.NONE)
         {
             animator.SetBool("Walk", false);
         }
+    }
+
+    void PlaySkill(SkillType skillType)
+    {
+        switch (skillType)
+        {
+            case SkillType.SKILL_1:
+                {
+                    animator.SetTrigger("Skill1");
+                }
+                break;
+            case SkillType.SKILL_2:
+                {
+                    animator.SetTrigger("Skill2");
+                }
+                break;
+        }
+    }
+
+    void OnSkillStart()
+    {
+        IsSkillPlaying = true;
+    }
+
+    void OnSkillCompleted()
+    {
+        IsSkillPlaying = false;
     }
 }

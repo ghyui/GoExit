@@ -14,6 +14,8 @@ public enum MoveDirection
 
     VERTICAL = UP | DOWN,
     HORIZONTAL = LEFT | RIGHT,
+
+    ALL = VERTICAL | HORIZONTAL,
 }
 
 public class Movement
@@ -31,5 +33,10 @@ public class Movement
     public bool HasDirection(MoveDirection dir)
     {
         return (Direction & dir) > 0;
+    }
+
+    public void StopMove(MoveDirection dir)
+    {
+        RemoveDirection(dir);
     }
 }
