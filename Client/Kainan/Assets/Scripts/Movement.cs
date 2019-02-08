@@ -34,9 +34,4 @@ public class Movement
     {
         return (Direction & dir) > 0;
     }
-
-    public void StopMove(MoveDirection dir)
-    {
-        RemoveDirection(dir);
-    }
 }

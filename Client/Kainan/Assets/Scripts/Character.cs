@@ -188,7 +188,7 @@ public class Character : MonoBehaviour {
 
     void StopMove(MoveDirection dir)
     {
-        movement.StopMove(dir);
+        movement.RemoveDirection(dir);
 
         if(movement.Direction == MoveDirection.NONE)
         {
