@@ -8,6 +8,13 @@ public enum SkillType
 {
     SKILL_1,
     SKILL_2,
+    TRANSFORM,
+}
+
+public enum TransformMode
+{
+    NORMAL,
+    DRAGON,
 }
 
 
@@ -21,17 +28,21 @@ public class Character : MonoBehaviour {
     [Header("Skill")]
     [SerializeField]
     bool movableWhenPlayingSkillMotion = true;
+    [SerializeField]
+    float comboDelaySeconds = 0.5f;
 
     bool IsSkillPlaying = false;
     bool IsWalking { get { return movement.Direction != MoveDirection.NONE; } }
     Movement movement = new Movement();
+    TransformMode currentMode = TransformMode.NORMAL;
 
     Animator animator;
 
 	void Start () {
         animator = GetComponent<Animator>();
+        animator.SetInteger("Mode", (int)currentMode);
 
-        foreach(var skillState in animator.GetBehaviours<SkillStateMachineBehaviour>())
+        foreach (var skillState in animator.GetBehaviours<SkillStateMachineBehaviour>())
         {
             skillState.OnStart += OnSkillStart;
             skillState.OnCompleted += OnSkillCompleted;
@@ -39,18 +50,10 @@ public class Character : MonoBehaviour {
 	}
 	
 	// Update is called once per frame
-	void Update () {
-
+	void Update ()
+    {
         ProcessMoveInput();
-
-        if (Input.GetMouseButtonDown(0))
-        {
-            PlaySkill(SkillType.SKILL_1);
-        }
-        if (Input.GetMouseButtonDown(1))
-        {
-            PlaySkill(SkillType.SKILL_2);
-        }
+        ProcessSkillInput();
     }
 
     bool CanMovable()
@@ -118,9 +121,51 @@ public class Character : MonoBehaviour {
             }
 
             transform.Translate(new Vector2(newX, newY));
+
+            SetFace();
+        }
+    }
+
+    bool dragonCombo = false;
+    Coroutine comboCoroutine;
+    void ProcessSkillInput()
+    {
+        if(currentMode == TransformMode.NORMAL)
+        {
+            if (Input.GetMouseButtonDown(0))
+            {
+                PlaySkill(SkillType.SKILL_1);
+            }
+            if (Input.GetMouseButtonDown(1))
+            {
+                PlaySkill(SkillType.SKILL_2);
+            }
+        }
+        else if(currentMode == TransformMode.DRAGON)
+        {
+            if (Input.GetMouseButtonDown(0))
+            {
+                if (dragonCombo == false)
+                {
+                    Debug.Log("Skill1");
+                    PlaySkill(SkillType.SKILL_1);
+                    dragonCombo = true;
+                }
+                else
+                {
+                    Debug.Log("Skill2");
+                    PlaySkill(SkillType.SKILL_2);
+                    dragonCombo = false;
+                    if(comboCoroutine != null)
+                        StopCoroutine(comboCoroutine);
+                }
+            }
         }
 
-        SetFace();
+        if(Input.GetKeyDown(KeyCode.LeftShift))
+        {
+            PlaySkill(SkillType.TRANSFORM);
+        }
     }
 
     void SetFace()
@@ -142,17 +187,14 @@ public class Character : MonoBehaviour {
             animator.SetFloat("FaceX", 1f);
         }
 
-        if (IsWalking)
+        if (movement.HasDirection(MoveDirection.HORIZONTAL) == false)
         {
-            if (movement.HasDirection(MoveDirection.HORIZONTAL) == false)
-            {
-                animator.SetFloat("FaceX", 0f);
-            }
-            if (movement.HasDirection(MoveDirection.VERTICAL) == false)
-            {
-                animator.SetFloat("FaceY", 0f);
-            }
-        }        
+            animator.SetFloat("FaceX", 0f);
+        }
+        if (movement.HasDirection(MoveDirection.VERTICAL) == false)
+        {
+            animator.SetFloat("FaceY", 0f);
+        }
     }
 
     void StartMove(MoveDirection dir)
@@ -183,7 +225,10 @@ public class Character : MonoBehaviour {
                 break;
         }
 
-        animator.SetBool("Walk", true);
+        if(CanMovable())
+        {
+            animator.SetBool("Walk", true);
+        }
     }
 
     void StopMove(MoveDirection dir)
@@ -198,6 +243,11 @@ public class Character : MonoBehaviour {
 
     void PlaySkill(SkillType skillType)
     {
+        if (IsSkillPlaying)
+            return;
+
+        animator.SetBool("Walk", false);
+
         switch (skillType)
         {
             case SkillType.SKILL_1:
@@ -210,6 +260,14 @@ public class Character : MonoBehaviour {
                     animator.SetTrigger("Skill2");
                 }
                 break;
+            case SkillType.TRANSFORM:
+                {
+                    animator.SetTrigger("Transform");
+
+                    currentMode = currentMode == TransformMode.NORMAL ? TransformMode.DRAGON : TransformMode.NORMAL;
+                    animator.SetInteger("Mode", (int)currentMode);
+                }
+                break;
         }
     }
 
@@ -220,6 +278,26 @@ public class Character : MonoBehaviour {
 
     void OnSkillCompleted()
     {
+        if(IsWalking)
+            animator.SetBool("Walk", true);
+
+        if(dragonCombo)
+        {
+            comboCoroutine = StartCoroutine(SetTimer(comboDelaySeconds, 
+                () => {
+                    Debug.Log("combo time over");
+                    dragonCombo = false;
+                }));
+        }
+
         IsSkillPlaying = false;
+    }
+
+    IEnumerator SetTimer(float seconds, Action action)
+    {
+        yield return new WaitForSeconds(seconds);
+
+        if (action != null)
+            action();
     }
 }
