@@ -130,6 +130,9 @@ public class Character : MonoBehaviour {
     Coroutine comboCoroutine;
     void ProcessSkillInput()
     {
+        if (IsSkillPlaying)
+            return;
+
         if(currentMode == TransformMode.NORMAL)
         {
             if (Input.GetMouseButtonDown(0))
@@ -243,9 +246,6 @@ public class Character : MonoBehaviour {
 
     void PlaySkill(SkillType skillType)
     {
-        if (IsSkillPlaying)
-            return;
-
         animator.SetBool("Walk", false);
 
         switch (skillType)
