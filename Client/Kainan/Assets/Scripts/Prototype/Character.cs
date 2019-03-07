@@ -4,20 +4,6 @@ using System.Linq;
 using UnityEngine;
 using System;
 
-public enum SkillType
-{
-    SKILL_1,
-    SKILL_2,
-    TRANSFORM,
-}
-
-public enum TransformMode
-{
-    NORMAL,
-    DRAGON,
-}
-
-
 public class Character : MonoBehaviour {
 
     // Use this for initialization
@@ -25,29 +11,21 @@ public class Character : MonoBehaviour {
     [SerializeField]
     float speed = 20f;
 
-    [Header("Skill")]
-    [SerializeField]
-    bool movableWhenPlayingSkillMotion = true;
-    [SerializeField]
-    float comboDelaySeconds = 0.5f;
-
-    bool IsSkillPlaying = false;
-    bool IsWalking { get { return movement.Direction != MoveDirection.NONE; } }
+    public bool IsWalking { get { return movement.Direction != MoveDirection.NONE; } }
     Movement movement = new Movement();
-    TransformMode currentMode = TransformMode.NORMAL;
 
-    Animator animator;
+    protected Animator animator;
 
 	void Start () {
         animator = GetComponent<Animator>();
-        animator.SetInteger("Mode", (int)currentMode);
 
-        foreach (var skillState in animator.GetBehaviours<SkillStateMachineBehaviour>())
-        {
-            skillState.OnStart += OnSkillStart;
-            skillState.OnCompleted += OnSkillCompleted;
-        }
-	}
+        OnStart();
+    }
+
+    protected virtual void OnStart()
+    {
+
+    }
 	
 	// Update is called once per frame
 	void Update ()
@@ -56,9 +34,9 @@ public class Character : MonoBehaviour {
         ProcessSkillInput();
     }
 
-    bool CanMovable()
+    public virtual bool CanMovable()
     {
-        return movableWhenPlayingSkillMotion || IsSkillPlaying == false;
+        return true;
     }
 
     void ProcessMoveInput()
@@ -128,47 +106,8 @@ public class Character : MonoBehaviour {
 
     bool dragonCombo = false;
     Coroutine comboCoroutine;
-    void ProcessSkillInput()
+    protected virtual void ProcessSkillInput()
     {
-        if (IsSkillPlaying)
-            return;
-
-        if(currentMode == TransformMode.NORMAL)
-        {
-            if (Input.GetMouseButtonDown(0))
-            {
-                PlaySkill(SkillType.SKILL_1);
-            }
-            if (Input.GetMouseButtonDown(1))
-            {
-                PlaySkill(SkillType.SKILL_2);
-            }
-        }
-        else if(currentMode == TransformMode.DRAGON)
-        {
-            if (Input.GetMouseButtonDown(0))
-            {
-                if (dragonCombo == false)
-                {
-                    Debug.Log("Skill1");
-                    PlaySkill(SkillType.SKILL_1);
-                    dragonCombo = true;
-                }
-                else
-                {
-                    Debug.Log("Skill2");
-                    PlaySkill(SkillType.SKILL_2);
-                    dragonCombo = false;
-                    if(comboCoroutine != null)
-                        StopCoroutine(comboCoroutine);
-                }
-            }
-        }
-
-        if(Input.GetKeyDown(KeyCode.LeftShift))
-        {
-            PlaySkill(SkillType.TRANSFORM);
-        }
     }
 
     void SetFace()
@@ -244,60 +183,5 @@ public class Character : MonoBehaviour {
         }
     }
 
-    void PlaySkill(SkillType skillType)
-    {
-        animator.SetBool("Walk", false);
-
-        switch (skillType)
-        {
-            case SkillType.SKILL_1:
-                {
-                    animator.SetTrigger("Skill1");
-                }
-                break;
-            case SkillType.SKILL_2:
-                {
-                    animator.SetTrigger("Skill2");
-                }
-                break;
-            case SkillType.TRANSFORM:
-                {
-                    animator.SetTrigger("Transform");
-
-                    currentMode = currentMode == TransformMode.NORMAL ? TransformMode.DRAGON : TransformMode.NORMAL;
-                    animator.SetInteger("Mode", (int)currentMode);
-                }
-                break;
-        }
-    }
-
-    void OnSkillStart()
-    {
-        IsSkillPlaying = true;
-    }
-
-    void OnSkillCompleted()
-    {
-        if(IsWalking)
-            animator.SetBool("Walk", true);
-
-        if(dragonCombo)
-        {
-            comboCoroutine = StartCoroutine(SetTimer(comboDelaySeconds, 
-                () => {
-                    Debug.Log("combo time over");
-                    dragonCombo = false;
-                }));
-        }
-
-        IsSkillPlaying = false;
-    }
-
-    IEnumerator SetTimer(float seconds, Action action)
-    {
-        yield return new WaitForSeconds(seconds);
-
-        if (action != null)
-            action();
-    }
+    
 }
